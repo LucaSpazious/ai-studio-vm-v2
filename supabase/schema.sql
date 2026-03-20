@@ -23,7 +23,7 @@ create table if not exists aistudio_spaces (
 -- Assets (day/night photo pairs)
 create table if not exists aistudio_assets (
   id uuid primary key default gen_random_uuid(),
-  space_id uuid not null references aistudio_spaces(id) on delete cascade,
+  category_id uuid not null references aistudio_categories(id) on delete cascade,
   property_id text not null,
   name text not null,
   day_url text,
@@ -38,6 +38,6 @@ create table if not exists aistudio_assets (
 create index if not exists idx_categories_property on aistudio_categories(property_id);
 create index if not exists idx_spaces_category on aistudio_spaces(category_id);
 create index if not exists idx_spaces_property on aistudio_spaces(property_id);
-create index if not exists idx_assets_space on aistudio_assets(space_id);
+create index if not exists idx_assets_category on aistudio_assets(category_id);
 create index if not exists idx_assets_property on aistudio_assets(property_id);
 create index if not exists idx_assets_status on aistudio_assets(status);

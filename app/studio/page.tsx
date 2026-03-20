@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import Sidebar from "@/components/studio/Sidebar";
 import Topbar from "@/components/studio/Topbar";
 import FolderTree, { FolderTreeHandle } from "@/components/studio/FolderTree";
+import AssetGrid from "@/components/studio/AssetGrid";
 
 type Mode = "day" | "night";
 
@@ -51,16 +52,22 @@ export default function StudioPage() {
             className="flex-1 overflow-auto transition-colors duration-200"
             style={{ backgroundColor: isNight ? "#060F0E" : "#F9FAFB" }}
           >
-            <div className="flex items-center justify-center h-full">
-              <p
-                className="text-sm"
-                style={{ color: isNight ? "#60D4C8" : "#9CA3AF" }}
-              >
-                {selectedCategoryId
-                  ? "Category selected — assets coming in Sprint 3"
-                  : "Select a category to begin"}
-              </p>
-            </div>
+            {selectedCategoryId ? (
+              <AssetGrid
+                key={selectedCategoryId}
+                categoryId={selectedCategoryId}
+                mode={mode}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <p
+                  className="text-sm"
+                  style={{ color: isNight ? "#60D4C8" : "#9CA3AF" }}
+                >
+                  Select a category to begin
+                </p>
+              </div>
+            )}
           </main>
         </div>
       </div>
