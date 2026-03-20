@@ -35,6 +35,12 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
+    // Skip if night version already exists
+    if (asset.night_url) {
+      results.push({ id: assetId, status: "skipped", night_url: asset.night_url });
+      continue;
+    }
+
     // Mark as processing
     await supabase
       .from("aistudio_assets")

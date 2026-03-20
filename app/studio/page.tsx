@@ -9,7 +9,6 @@ import ActionBar from "@/components/studio/ActionBar";
 
 type Mode = "day" | "night";
 
-/** Download a file by fetching as blob (works cross-origin) */
 async function downloadFile(url: string, filename: string) {
   const res = await fetch(url);
   const blob = await res.blob();
@@ -45,6 +44,13 @@ export default function StudioPage() {
     });
   }, []);
 
+  const handleSelectAll = useCallback((allIds: string[]) => {
+    setSelectedAssetIds((prev) => {
+      const allSelected = allIds.every((id) => prev.has(id));
+      return allSelected ? new Set() : new Set(allIds);
+    });
+  }, []);
+
   const handleClearSelection = useCallback(() => {
     setSelectedAssetIds(new Set());
   }, []);
@@ -58,9 +64,20 @@ export default function StudioPage() {
     assetsRef.current = assets;
   }, []);
 
+  // Count how many selected assets need night generation
+  const pendingNightCount = Array.from(selectedAssetIds).filter((id) => {
+    const asset = assetsRef.current.find((a) => a.id === id);
+    return asset && asset.day_url && !asset.night_url;
+  }).length;
+
   const handleApplyNight = async () => {
-    if (selectedAssetIds.size === 0) return;
-    const ids = Array.from(selectedAssetIds);
+    // Only send assets that don't have night_url yet
+    const ids = Array.from(selectedAssetIds).filter((id) => {
+      const asset = assetsRef.current.find((a) => a.id === id);
+      return asset && asset.day_url && !asset.night_url;
+    });
+
+    if (ids.length === 0) return;
 
     setGenerating(true);
     setProcessingIds(new Set(ids));
@@ -101,7 +118,6 @@ export default function StudioPage() {
           : `${asset.name}${suffix}`;
 
         await downloadFile(url, dlName);
-        // Small delay between downloads to avoid browser blocking
         if (selected.length > 1) {
           await new Promise((r) => setTimeout(r, 300));
         }
@@ -153,6 +169,7 @@ export default function StudioPage() {
                 selectedIds={selectedAssetIds}
                 processingIds={processingIds}
                 onToggleSelect={handleToggleSelect}
+                onSelectAll={handleSelectAll}
                 onAssetsLoaded={handleAssetsLoaded}
               />
             ) : (
@@ -171,6 +188,7 @@ export default function StudioPage() {
 
       <ActionBar
         count={selectedAssetIds.size}
+        pendingNightCount={pendingNightCount}
         mode={mode}
         generating={generating}
         downloading={downloading}

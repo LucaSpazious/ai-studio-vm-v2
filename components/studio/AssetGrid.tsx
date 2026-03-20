@@ -14,7 +14,6 @@ export interface Asset {
   created_at: string;
 }
 
-/** Download a file by fetching as blob (works cross-origin) */
 async function downloadFile(url: string, filename: string) {
   const res = await fetch(url);
   const blob = await res.blob();
@@ -34,6 +33,7 @@ interface AssetGridProps {
   selectedIds: Set<string>;
   processingIds: Set<string>;
   onToggleSelect: (id: string) => void;
+  onSelectAll: (allIds: string[]) => void;
   onAssetsLoaded?: (assets: Asset[]) => void;
 }
 
@@ -43,6 +43,7 @@ export default function AssetGrid({
   selectedIds,
   processingIds,
   onToggleSelect,
+  onSelectAll,
   onAssetsLoaded,
 }: AssetGridProps) {
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -86,6 +87,12 @@ export default function AssetGrid({
     await fetchAssets();
   };
 
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("Delete this photo?")) return;
+    const res = await fetch(`/api/assets/${id}`, { method: "DELETE" });
+    if (res.ok) await fetchAssets();
+  };
+
   const c = {
     text: isNight ? "#E2F5F2" : "#374151",
     muted: isNight ? "#60D4C8" : "#9CA3AF",
@@ -96,6 +103,10 @@ export default function AssetGrid({
   };
 
   const previewAsset = previewId ? assets.find((a) => a.id === previewId) : null;
+  const allIds = assets.map((a) => a.id);
+  const selectedCount = allIds.filter((id) => selectedIds.has(id)).length;
+  const allSelected = assets.length > 0 && selectedCount === assets.length;
+  const someSelected = selectedCount > 0 && !allSelected;
 
   return (
     <div className="p-4 h-full overflow-auto relative">
@@ -119,29 +130,60 @@ export default function AssetGrid({
           <p className="text-sm" style={{ color: c.muted }}>Loading assets…</p>
         </div>
       ) : assets.length > 0 ? (
-        <div
-          className="grid gap-3"
-          style={{ gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))" }}
-        >
-          {assets.map((asset) => (
-            <AssetCard
-              key={asset.id}
-              asset={asset}
-              mode={mode}
+        <>
+          {/* Select all header */}
+          <div className="flex items-center gap-2 mb-3">
+            <button
+              className="w-4 h-4 rounded-sm border flex items-center justify-center shrink-0"
+              style={{
+                borderColor: allSelected || someSelected ? c.accent : c.border,
+                backgroundColor: allSelected ? c.accent : "transparent",
+              }}
+              onClick={() => onSelectAll(allIds)}
+            >
+              {allSelected && (
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M2 5l2 2 4-4.5" />
+                </svg>
+              )}
+              {someSelected && (
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round">
+                  <path d="M2 5h6" />
+                </svg>
+              )}
+            </button>
+            <span className="text-xs" style={{ color: c.muted }}>
+              {selectedCount > 0
+                ? `${selectedCount} of ${assets.length} selected`
+                : "Select all"}
+            </span>
+          </div>
+
+          <div
+            className="grid gap-3"
+            style={{ gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))" }}
+          >
+            {assets.map((asset) => (
+              <AssetCard
+                key={asset.id}
+                asset={asset}
+                mode={mode}
+                colors={c}
+                selected={selectedIds.has(asset.id)}
+                processing={processingIds.has(asset.id)}
+                onToggleSelect={() => onToggleSelect(asset.id)}
+                onPreview={() => setPreviewId(asset.id)}
+                onDelete={() => handleDelete(asset.id)}
+              />
+            ))}
+            <UploadZone
+              compact
               colors={c}
-              selected={selectedIds.has(asset.id)}
-              processing={processingIds.has(asset.id)}
-              onToggleSelect={() => onToggleSelect(asset.id)}
-              onPreview={() => setPreviewId(asset.id)}
+              uploading={uploading}
+              onClick={() => fileInputRef.current?.click()}
             />
-          ))}
-          <UploadZone
-            compact
-            colors={c}
-            uploading={uploading}
-            onClick={() => fileInputRef.current?.click()}
-          />
-        </div>
+          </div>
+        </>
       ) : (
         <div className="flex items-center justify-center h-full">
           <UploadZone
@@ -174,6 +216,7 @@ function AssetCard({
   processing,
   onToggleSelect,
   onPreview,
+  onDelete,
 }: {
   asset: Asset;
   mode: "day" | "night";
@@ -182,6 +225,7 @@ function AssetCard({
   processing: boolean;
   onToggleSelect: () => void;
   onPreview: () => void;
+  onDelete: () => void;
 }) {
   const isNight = mode === "night";
   const url = isNight ? asset.night_url : asset.day_url;
@@ -213,7 +257,7 @@ function AssetCard({
         )}
       </div>
 
-      {/* Checkbox (visible on hover or when selected) */}
+      {/* Checkbox */}
       <button
         className="absolute top-1.5 left-1.5 w-5 h-5 rounded flex items-center justify-center transition-opacity"
         style={{
@@ -256,12 +300,22 @@ function AssetCard({
         </div>
       )}
 
-      {/* Hover: download button */}
-      {url && !processing && (
-        <div className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-          {!(!isNight && hasNight) && (
+      {/* Hover actions: delete + download */}
+      {!processing && (
+        <div className="absolute bottom-8 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            className="w-5 h-5 flex items-center justify-center rounded bg-black/40 hover:bg-red-600/80"
+            title="Delete"
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="white" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2 3h6M3 3v5a.5.5 0 00.5.5h3a.5.5 0 00.5-.5V3M4 3V2h2v1" />
+            </svg>
+          </button>
+          {url && (
             <button
               className="w-5 h-5 flex items-center justify-center rounded bg-black/40 hover:bg-black/60"
+              title="Download"
               onClick={(e) => {
                 e.stopPropagation();
                 const suffix = isNight ? "_night" : "_day";
@@ -272,8 +326,8 @@ function AssetCard({
                 downloadFile(url, dlName);
               }}
             >
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M6 2v7M3 7l3 3 3-3M2 11h8" />
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="white" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 1.5v5.5M2.5 5.5L5 8l2.5-2.5M1.5 9h7" />
               </svg>
             </button>
           )}
