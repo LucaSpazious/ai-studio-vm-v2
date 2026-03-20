@@ -7,9 +7,11 @@ type Mode = "day" | "night";
 interface TopbarProps {
   mode: Mode;
   onModeChange: (mode: Mode) => void;
+  onNewCategory?: () => void;
+  onNewSubfolder?: () => void;
 }
 
-export default function Topbar({ mode, onModeChange }: TopbarProps) {
+export default function Topbar({ mode, onModeChange, onNewCategory, onNewSubfolder }: TopbarProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -101,8 +103,8 @@ export default function Topbar({ mode, onModeChange }: TopbarProps) {
               borderColor: isNight ? "#1B3A3A" : "#E5E7EB",
             }}
           >
-            <DropdownItem label="New Category" isNight={isNight} onClick={() => setDropdownOpen(false)} />
-            <DropdownItem label="New Subfolder" isNight={isNight} onClick={() => setDropdownOpen(false)} />
+            <DropdownItem label="New Category" isNight={isNight} onClick={() => { setDropdownOpen(false); onNewCategory?.(); }} />
+            <DropdownItem label="New Subfolder" isNight={isNight} onClick={() => { setDropdownOpen(false); onNewSubfolder?.(); }} />
             <div className="my-1 border-t" style={{ borderColor: isNight ? "#1B3A3A" : "#E5E7EB" }} />
             <DropdownItem label="Upload Photos" isNight={isNight} onClick={() => setDropdownOpen(false)} />
           </div>
