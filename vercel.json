@@ -5,6 +5,9 @@
     },
     "app/api/upload/route.ts": {
       "maxDuration": 60
+    },
+    "app/api/ai-lifestyle/generate/route.ts": {
+      "maxDuration": 300
     }
   }
 }
