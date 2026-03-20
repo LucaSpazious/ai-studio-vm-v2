@@ -15,8 +15,8 @@ const PRODUCTS = [
   {
     title: "AI Lifestyle",
     description: "Replace people with lifestyle archetypes",
-    href: "#",
-    enabled: false,
+    href: "/ai-lifestyle",
+    enabled: true,
     icon: (
       <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="16" cy="11" r="5" />
