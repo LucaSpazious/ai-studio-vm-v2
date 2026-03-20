@@ -139,8 +139,8 @@ function AssetCard({
         className="aspect-square flex items-center justify-center overflow-hidden"
         style={{ backgroundColor: url ? undefined : colors.placeholder }}
       >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         {url ? (
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={url}
             alt={asset.name}
