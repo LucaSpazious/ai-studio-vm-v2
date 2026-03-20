@@ -41,20 +41,30 @@ export default function AssetGrid({ categoryId, mode }: AssetGridProps) {
 
   const handleUpload = async (files: FileList) => {
     setUploading(true);
-    for (const file of Array.from(files)) {
-      const form = new FormData();
-      form.append("file", file);
-      form.append("categoryId", categoryId);
-      form.append("mode", mode);
-      await fetch("/api/upload", { method: "POST", body: form });
+    try {
+      for (const file of Array.from(files)) {
+        const form = new FormData();
+        form.append("file", file);
+        form.append("categoryId", categoryId);
+        form.append("mode", mode);
+        const res = await fetch("/api/upload", { method: "POST", body: form });
+        if (!res.ok) {
+          const err = await res.json();
+          console.error("Upload failed:", err);
+        }
+      }
+    } finally {
+      setUploading(false);
     }
-    setUploading(false);
     await fetchAssets();
   };
 
-  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.length) handleUpload(e.target.files);
-    e.target.value = "";
+  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files?.length) {
+      e.target.value = "";
+      await handleUpload(files);
+    }
   };
 
   const c = {

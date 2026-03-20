@@ -30,14 +30,18 @@ export async function POST(req: NextRequest) {
 
   // Upload to Supabase Storage (upsert to allow re-uploads)
   const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  console.log(`[upload] bucket=${bucket} path=${storagePath} size=${buffer.length}`);
+
   const { error: uploadError } = await supabase.storage
     .from(bucket)
-    .upload(storagePath, arrayBuffer, {
+    .upload(storagePath, buffer, {
       contentType: file.type,
       upsert: true,
     });
 
   if (uploadError) {
+    console.error("[upload] Storage error:", uploadError.message);
     return NextResponse.json(
       { error: `Storage upload failed: ${uploadError.message}` },
       { status: 500 }
@@ -82,6 +86,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Insert new asset
+  console.log(`[upload] Inserting new asset: name=${file.name} category=${categoryId} ${urlField}=${publicUrl}`);
   const { data, error } = await supabase
     .from("aistudio_assets")
     .insert({
@@ -96,7 +101,9 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (error) {
+    console.error("[upload] DB insert error:", error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+  console.log("[upload] Success:", data.id);
   return NextResponse.json(data, { status: 201 });
 }
