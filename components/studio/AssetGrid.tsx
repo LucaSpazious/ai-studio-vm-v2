@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import PreviewModal from "./PreviewModal";
 
 export interface Asset {
   id: string;
@@ -47,6 +48,7 @@ export default function AssetGrid({
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [previewId, setPreviewId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isNight = mode === "night";
 
@@ -93,6 +95,8 @@ export default function AssetGrid({
     accent: "#0A9E8C",
   };
 
+  const previewAsset = previewId ? assets.find((a) => a.id === previewId) : null;
+
   return (
     <div className="p-4 h-full overflow-auto relative">
       <input
@@ -127,7 +131,8 @@ export default function AssetGrid({
               colors={c}
               selected={selectedIds.has(asset.id)}
               processing={processingIds.has(asset.id)}
-              onToggle={() => onToggleSelect(asset.id)}
+              onToggleSelect={() => onToggleSelect(asset.id)}
+              onPreview={() => setPreviewId(asset.id)}
             />
           ))}
           <UploadZone
@@ -146,6 +151,16 @@ export default function AssetGrid({
           />
         </div>
       )}
+
+      {previewAsset && (
+        <PreviewModal
+          asset={previewAsset}
+          assets={assets}
+          mode={mode}
+          onClose={() => setPreviewId(null)}
+          onNavigate={setPreviewId}
+        />
+      )}
     </div>
   );
 }
@@ -157,14 +172,16 @@ function AssetCard({
   colors,
   selected,
   processing,
-  onToggle,
+  onToggleSelect,
+  onPreview,
 }: {
   asset: Asset;
   mode: "day" | "night";
   colors: { cardBg: string; placeholder: string; border: string; text: string; muted: string; accent: string };
   selected: boolean;
   processing: boolean;
-  onToggle: () => void;
+  onToggleSelect: () => void;
+  onPreview: () => void;
 }) {
   const isNight = mode === "night";
   const url = isNight ? asset.night_url : asset.day_url;
@@ -178,7 +195,7 @@ function AssetCard({
         backgroundColor: colors.cardBg,
         borderColor: selected ? colors.accent : colors.border,
       }}
-      onClick={onToggle}
+      onClick={onPreview}
     >
       <div
         className="aspect-square flex items-center justify-center overflow-hidden"
@@ -196,17 +213,23 @@ function AssetCard({
         )}
       </div>
 
-      {/* Selected checkbox */}
-      {selected && (
-        <div
-          className="absolute top-1.5 left-1.5 w-5 h-5 rounded flex items-center justify-center"
-          style={{ backgroundColor: colors.accent }}
-        >
+      {/* Checkbox (visible on hover or when selected) */}
+      <button
+        className="absolute top-1.5 left-1.5 w-5 h-5 rounded flex items-center justify-center transition-opacity"
+        style={{
+          backgroundColor: selected ? colors.accent : "rgba(0,0,0,0.3)",
+          opacity: selected ? 1 : undefined,
+        }}
+        onClick={(e) => { e.stopPropagation(); onToggleSelect(); }}
+      >
+        {selected ? (
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M2.5 6l2.5 2.5 4.5-5" />
           </svg>
-        </div>
-      )}
+        ) : (
+          <span className="block w-3 h-3 rounded-sm border border-white/70 group-hover:opacity-100 opacity-0 transition-opacity" />
+        )}
+      </button>
 
       {/* Night badge (day mode only) */}
       {!isNight && hasNight && !processing && (
@@ -233,26 +256,27 @@ function AssetCard({
         </div>
       )}
 
-      {/* Hover overlay (not when processing) */}
+      {/* Hover: download button */}
       {url && !processing && (
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-start justify-end p-1.5 opacity-0 group-hover:opacity-100">
-          <button
-            className="w-5 h-5 flex items-center justify-center rounded bg-white/20 hover:bg-white/40"
-            onClick={(e) => {
-              e.stopPropagation();
-              const suffix = isNight ? "_night" : "_day";
-              const ext = asset.name.lastIndexOf(".") >= 0 ? "" : ".jpg";
-              const parts = asset.name.split(".");
-              const dlName = parts.length > 1
-                ? `${parts.slice(0, -1).join(".")}${suffix}.${parts[parts.length - 1]}`
-                : `${asset.name}${suffix}${ext}`;
-              downloadFile(url, dlName);
-            }}
-          >
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M6 2v7M3 7l3 3 3-3M2 11h8" />
-            </svg>
-          </button>
+        <div className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          {!(!isNight && hasNight) && (
+            <button
+              className="w-5 h-5 flex items-center justify-center rounded bg-black/40 hover:bg-black/60"
+              onClick={(e) => {
+                e.stopPropagation();
+                const suffix = isNight ? "_night" : "_day";
+                const parts = asset.name.split(".");
+                const dlName = parts.length > 1
+                  ? `${parts.slice(0, -1).join(".")}${suffix}.${parts[parts.length - 1]}`
+                  : `${asset.name}${suffix}`;
+                downloadFile(url, dlName);
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 2v7M3 7l3 3 3-3M2 11h8" />
+              </svg>
+            </button>
+          )}
         </div>
       )}
 
