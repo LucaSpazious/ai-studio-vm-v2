@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createBrowserClient, getServiceSupabase } from "@/lib/supabase";
+import { getServiceSupabase } from "@/lib/supabase";
 
 const PROPERTY_ID = "rosewood-mayakoba";
 
 /** GET /api/categories — list all categories for the property */
 export async function GET() {
-  const supabase = createBrowserClient();
+  const supabase = getServiceSupabase();
   const { data, error } = await supabase
     .from("aistudio_categories")
     .select("*")
