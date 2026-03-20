@@ -91,7 +91,8 @@ export default function AssetGrid({ categoryId, mode }: AssetGridProps) {
         type="file"
         accept="image/*"
         multiple
-        className="hidden"
+        className="absolute w-0 h-0 overflow-hidden"
+        style={{ position: "absolute", left: "-9999px" }}
         onChange={onFileChange}
       />
 
