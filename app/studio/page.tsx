@@ -4,10 +4,24 @@ import { useState, useRef, useCallback } from "react";
 import Sidebar from "@/components/studio/Sidebar";
 import Topbar from "@/components/studio/Topbar";
 import FolderTree, { FolderTreeHandle } from "@/components/studio/FolderTree";
-import AssetGrid from "@/components/studio/AssetGrid";
+import AssetGrid, { Asset } from "@/components/studio/AssetGrid";
 import ActionBar from "@/components/studio/ActionBar";
 
 type Mode = "day" | "night";
+
+/** Download a file by fetching as blob (works cross-origin) */
+async function downloadFile(url: string, filename: string) {
+  const res = await fetch(url);
+  const blob = await res.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = blobUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(blobUrl);
+}
 
 export default function StudioPage() {
   const [mode, setMode] = useState<Mode>("day");
@@ -16,8 +30,10 @@ export default function StudioPage() {
   const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(new Set());
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
   const [generating, setGenerating] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const treeRef = useRef<FolderTreeHandle>(null);
+  const assetsRef = useRef<Asset[]>([]);
 
   const isNight = mode === "night";
 
@@ -38,8 +54,8 @@ export default function StudioPage() {
     setSelectedAssetIds(new Set());
   }, []);
 
-  const handleAssetsLoaded = useCallback(() => {
-    // Hook for future use (e.g. clean up stale selections)
+  const handleAssetsLoaded = useCallback((assets: Asset[]) => {
+    assetsRef.current = assets;
   }, []);
 
   const handleApplyNight = async () => {
@@ -63,8 +79,35 @@ export default function StudioPage() {
       setGenerating(false);
       setProcessingIds(new Set());
       setSelectedAssetIds(new Set());
-      // Trigger re-fetch of assets
       setRefreshKey((k) => k + 1);
+    }
+  };
+
+  const handleDownload = async () => {
+    if (selectedAssetIds.size === 0) return;
+    setDownloading(true);
+
+    const selected = assetsRef.current.filter((a) => selectedAssetIds.has(a.id));
+    const suffix = isNight ? "_night" : "_day";
+
+    try {
+      for (const asset of selected) {
+        const url = isNight ? asset.night_url : asset.day_url;
+        if (!url) continue;
+
+        const parts = asset.name.split(".");
+        const dlName = parts.length > 1
+          ? `${parts.slice(0, -1).join(".")}${suffix}.${parts[parts.length - 1]}`
+          : `${asset.name}${suffix}`;
+
+        await downloadFile(url, dlName);
+        // Small delay between downloads to avoid browser blocking
+        if (selected.length > 1) {
+          await new Promise((r) => setTimeout(r, 300));
+        }
+      }
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -130,7 +173,9 @@ export default function StudioPage() {
         count={selectedAssetIds.size}
         mode={mode}
         generating={generating}
+        downloading={downloading}
         onApplyNight={handleApplyNight}
+        onDownload={handleDownload}
         onClear={handleClearSelection}
       />
     </div>

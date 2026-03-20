@@ -13,13 +13,27 @@ export interface Asset {
   created_at: string;
 }
 
+/** Download a file by fetching as blob (works cross-origin) */
+async function downloadFile(url: string, filename: string) {
+  const res = await fetch(url);
+  const blob = await res.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = blobUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(blobUrl);
+}
+
 interface AssetGridProps {
   categoryId: string;
   mode: "day" | "night";
   selectedIds: Set<string>;
   processingIds: Set<string>;
   onToggleSelect: (id: string) => void;
-  onAssetsLoaded?: () => void;
+  onAssetsLoaded?: (assets: Asset[]) => void;
 }
 
 export default function AssetGrid({
@@ -42,7 +56,7 @@ export default function AssetGrid({
       if (res.ok) {
         const data: Asset[] = await res.json();
         setAssets(data);
-        onAssetsLoaded?.();
+        onAssetsLoaded?.(data);
       }
     } finally {
       setLoading(false);
@@ -222,16 +236,23 @@ function AssetCard({
       {/* Hover overlay (not when processing) */}
       {url && !processing && (
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-start justify-end p-1.5 opacity-0 group-hover:opacity-100">
-          <a
-            href={url}
-            download={asset.name}
+          <button
             className="w-5 h-5 flex items-center justify-center rounded bg-white/20 hover:bg-white/40"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              const suffix = isNight ? "_night" : "_day";
+              const ext = asset.name.lastIndexOf(".") >= 0 ? "" : ".jpg";
+              const parts = asset.name.split(".");
+              const dlName = parts.length > 1
+                ? `${parts.slice(0, -1).join(".")}${suffix}.${parts[parts.length - 1]}`
+                : `${asset.name}${suffix}${ext}`;
+              downloadFile(url, dlName);
+            }}
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M6 2v7M3 7l3 3 3-3M2 11h8" />
             </svg>
-          </a>
+          </button>
         </div>
       )}
 

@@ -4,7 +4,9 @@ interface ActionBarProps {
   count: number;
   mode: "day" | "night";
   generating: boolean;
+  downloading: boolean;
   onApplyNight: () => void;
+  onDownload: () => void;
   onClear: () => void;
 }
 
@@ -12,7 +14,9 @@ export default function ActionBar({
   count,
   mode,
   generating,
+  downloading,
   onApplyNight,
+  onDownload,
   onClear,
 }: ActionBarProps) {
   if (count === 0) return null;
@@ -49,6 +53,27 @@ export default function ActionBar({
           )}
         </button>
       )}
+
+      <button
+        onClick={onDownload}
+        disabled={downloading || generating}
+        className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium text-white/80 hover:text-white transition-colors disabled:opacity-50 border"
+        style={{ borderColor: "#1B3A3A" }}
+      >
+        {downloading ? (
+          <>
+            <Spinner />
+            Downloading…
+          </>
+        ) : (
+          <>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M7 2v8M4 8l3 3 3-3M2 12h10" />
+            </svg>
+            Download
+          </>
+        )}
+      </button>
 
       <button
         onClick={onClear}
