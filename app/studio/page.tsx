@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import Sidebar from "@/components/studio/Sidebar";
 import Topbar from "@/components/studio/Topbar";
 import FolderTree, { FolderTreeHandle } from "@/components/studio/FolderTree";
 import AssetGrid from "@/components/studio/AssetGrid";
+import ActionBar from "@/components/studio/ActionBar";
 
 type Mode = "day" | "night";
 
@@ -12,9 +13,60 @@ export default function StudioPage() {
   const [mode, setMode] = useState<Mode>("day");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(new Set());
+  const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
+  const [generating, setGenerating] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const treeRef = useRef<FolderTreeHandle>(null);
 
   const isNight = mode === "night";
+
+  const handleToggleSelect = useCallback((id: string) => {
+    setSelectedAssetIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedAssetIds(new Set());
+  }, []);
+
+  const handleCategoryChange = useCallback((id: string | null) => {
+    setSelectedCategoryId(id);
+    setSelectedAssetIds(new Set());
+  }, []);
+
+  const handleAssetsLoaded = useCallback(() => {
+    // Hook for future use (e.g. clean up stale selections)
+  }, []);
+
+  const handleApplyNight = async () => {
+    if (selectedAssetIds.size === 0) return;
+    const ids = Array.from(selectedAssetIds);
+
+    setGenerating(true);
+    setProcessingIds(new Set(ids));
+
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assetIds: ids }),
+      });
+
+      if (!res.ok) {
+        console.error("Generate failed:", await res.json());
+      }
+    } finally {
+      setGenerating(false);
+      setProcessingIds(new Set());
+      setSelectedAssetIds(new Set());
+      // Trigger re-fetch of assets
+      setRefreshKey((k) => k + 1);
+    }
+  };
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -32,7 +84,6 @@ export default function StudioPage() {
         />
 
         <div className="flex flex-1 min-h-0">
-          {/* Folder tree panel */}
           <div
             className="w-[260px] shrink-0 border-r overflow-hidden flex flex-col"
             style={{
@@ -43,20 +94,23 @@ export default function StudioPage() {
             <FolderTree
               ref={treeRef}
               mode={mode}
-              onSelect={setSelectedCategoryId}
+              onSelect={handleCategoryChange}
             />
           </div>
 
-          {/* Content area */}
           <main
             className="flex-1 overflow-auto transition-colors duration-200"
             style={{ backgroundColor: isNight ? "#060F0E" : "#F9FAFB" }}
           >
             {selectedCategoryId ? (
               <AssetGrid
-                key={selectedCategoryId}
+                key={`${selectedCategoryId}-${refreshKey}`}
                 categoryId={selectedCategoryId}
                 mode={mode}
+                selectedIds={selectedAssetIds}
+                processingIds={processingIds}
+                onToggleSelect={handleToggleSelect}
+                onAssetsLoaded={handleAssetsLoaded}
               />
             ) : (
               <div className="flex items-center justify-center h-full">
@@ -71,6 +125,14 @@ export default function StudioPage() {
           </main>
         </div>
       </div>
+
+      <ActionBar
+        count={selectedAssetIds.size}
+        mode={mode}
+        generating={generating}
+        onApplyNight={handleApplyNight}
+        onClear={handleClearSelection}
+      />
     </div>
   );
 }

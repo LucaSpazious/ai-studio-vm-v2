@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 
-interface Asset {
+export interface Asset {
   id: string;
   category_id: string;
   property_id: string;
@@ -16,9 +16,20 @@ interface Asset {
 interface AssetGridProps {
   categoryId: string;
   mode: "day" | "night";
+  selectedIds: Set<string>;
+  processingIds: Set<string>;
+  onToggleSelect: (id: string) => void;
+  onAssetsLoaded?: () => void;
 }
 
-export default function AssetGrid({ categoryId, mode }: AssetGridProps) {
+export default function AssetGrid({
+  categoryId,
+  mode,
+  selectedIds,
+  processingIds,
+  onToggleSelect,
+  onAssetsLoaded,
+}: AssetGridProps) {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -28,11 +39,15 @@ export default function AssetGrid({ categoryId, mode }: AssetGridProps) {
   const fetchAssets = useCallback(async () => {
     try {
       const res = await fetch(`/api/assets?categoryId=${categoryId}`);
-      if (res.ok) setAssets(await res.json());
+      if (res.ok) {
+        const data: Asset[] = await res.json();
+        setAssets(data);
+        onAssetsLoaded?.();
+      }
     } finally {
       setLoading(false);
     }
-  }, [categoryId]);
+  }, [categoryId, onAssetsLoaded]);
 
   useEffect(() => {
     setLoading(true);
@@ -43,18 +58,11 @@ export default function AssetGrid({ categoryId, mode }: AssetGridProps) {
     setUploading(true);
     try {
       for (const file of files) {
-        console.log("Uploading:", file.name, "to category:", categoryId, "mode:", mode);
         const form = new FormData();
         form.append("file", file);
         form.append("categoryId", categoryId);
         form.append("mode", mode);
-        const res = await fetch("/api/upload", { method: "POST", body: form });
-        if (!res.ok) {
-          const err = await res.json();
-          console.error("Upload failed:", err);
-        } else {
-          console.log("Upload OK:", file.name);
-        }
+        await fetch("/api/upload", { method: "POST", body: form });
       }
     } finally {
       setUploading(false);
@@ -73,7 +81,6 @@ export default function AssetGrid({ categoryId, mode }: AssetGridProps) {
 
   return (
     <div className="p-4 h-full overflow-auto relative">
-      {/* File input always in DOM — never inside conditional blocks */}
       <input
         ref={fileInputRef}
         type="file"
@@ -81,7 +88,6 @@ export default function AssetGrid({ categoryId, mode }: AssetGridProps) {
         multiple
         style={{ position: "absolute", left: "-9999px", top: 0 }}
         onChange={(e) => {
-          console.log("FILE SELECTED", e.target.files?.length, "categoryId:", categoryId);
           const files = e.target.files;
           if (!files?.length) return;
           const fileList = Array.from(files);
@@ -100,7 +106,15 @@ export default function AssetGrid({ categoryId, mode }: AssetGridProps) {
           style={{ gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))" }}
         >
           {assets.map((asset) => (
-            <AssetCard key={asset.id} asset={asset} mode={mode} colors={c} />
+            <AssetCard
+              key={asset.id}
+              asset={asset}
+              mode={mode}
+              colors={c}
+              selected={selectedIds.has(asset.id)}
+              processing={processingIds.has(asset.id)}
+              onToggle={() => onToggleSelect(asset.id)}
+            />
           ))}
           <UploadZone
             compact
@@ -127,33 +141,38 @@ function AssetCard({
   asset,
   mode,
   colors,
+  selected,
+  processing,
+  onToggle,
 }: {
-  asset: { id: string; name: string; day_url: string | null; night_url: string | null };
+  asset: Asset;
   mode: "day" | "night";
-  colors: { cardBg: string; placeholder: string; border: string; text: string; muted: string };
+  colors: { cardBg: string; placeholder: string; border: string; text: string; muted: string; accent: string };
+  selected: boolean;
+  processing: boolean;
+  onToggle: () => void;
 }) {
   const isNight = mode === "night";
   const url = isNight ? asset.night_url : asset.day_url;
   const hasNight = !!asset.night_url;
+  const isError = asset.status === "error";
 
   return (
     <div
-      className="group relative rounded-lg overflow-hidden border transition-shadow hover:shadow-md"
-      style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}
+      className="group relative rounded-lg overflow-hidden border-2 transition-all cursor-pointer"
+      style={{
+        backgroundColor: colors.cardBg,
+        borderColor: selected ? colors.accent : colors.border,
+      }}
+      onClick={onToggle}
     >
-      {/* Image or placeholder */}
       <div
         className="aspect-square flex items-center justify-center overflow-hidden"
         style={{ backgroundColor: url ? undefined : colors.placeholder }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         {url ? (
-          <img
-            src={url}
-            alt={asset.name}
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={url} alt={asset.name} className="w-full h-full object-cover" loading="lazy" />
         ) : (
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={colors.muted} strokeWidth="1.5" opacity="0.4">
             <rect x="3" y="3" width="18" height="18" rx="3" />
@@ -163,17 +182,46 @@ function AssetCard({
         )}
       </div>
 
-      {/* Night badge (visible in day mode) */}
-      {!isNight && hasNight && (
+      {/* Selected checkbox */}
+      {selected && (
+        <div
+          className="absolute top-1.5 left-1.5 w-5 h-5 rounded flex items-center justify-center"
+          style={{ backgroundColor: colors.accent }}
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M2.5 6l2.5 2.5 4.5-5" />
+          </svg>
+        </div>
+      )}
+
+      {/* Night badge (day mode only) */}
+      {!isNight && hasNight && !processing && (
         <span className="absolute top-1.5 right-1.5 text-[10px] bg-black/60 text-white px-1.5 py-0.5 rounded-full">
           🌙
         </span>
       )}
 
-      {/* Hover overlay */}
-      {url && (
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-start justify-between p-1.5 opacity-0 group-hover:opacity-100">
-          <label className="w-4 h-4 rounded border border-white/70 bg-white/20 cursor-pointer" />
+      {/* Processing overlay */}
+      {processing && (
+        <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-1">
+          <svg className="animate-spin h-6 w-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+            <path d="M12 2a10 10 0 019.8 8" strokeLinecap="round" />
+          </svg>
+          <span className="text-[10px] text-white font-medium">Generating…</span>
+        </div>
+      )}
+
+      {/* Error badge */}
+      {isError && !processing && (
+        <div className="absolute inset-0 bg-red-900/30 flex items-center justify-center">
+          <span className="text-[10px] text-red-300 font-medium bg-black/50 px-2 py-0.5 rounded">Error</span>
+        </div>
+      )}
+
+      {/* Hover overlay (not when processing) */}
+      {url && !processing && (
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-start justify-end p-1.5 opacity-0 group-hover:opacity-100">
           <a
             href={url}
             download={asset.name}
@@ -187,11 +235,8 @@ function AssetCard({
         </div>
       )}
 
-      {/* Name */}
       <div className="px-2 py-1.5">
-        <p className="text-[11px] truncate" style={{ color: colors.text }}>
-          {asset.name}
-        </p>
+        <p className="text-[11px] truncate" style={{ color: colors.text }}>{asset.name}</p>
       </div>
     </div>
   );
