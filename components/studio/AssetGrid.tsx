@@ -39,10 +39,11 @@ export default function AssetGrid({ categoryId, mode }: AssetGridProps) {
     fetchAssets();
   }, [fetchAssets]);
 
-  const handleUpload = async (files: FileList) => {
+  const handleUploadFiles = async (files: File[]) => {
     setUploading(true);
     try {
-      for (const file of Array.from(files)) {
+      for (const file of files) {
+        console.log("Uploading:", file.name, "to category:", categoryId, "mode:", mode);
         const form = new FormData();
         form.append("file", file);
         form.append("categoryId", categoryId);
@@ -51,20 +52,14 @@ export default function AssetGrid({ categoryId, mode }: AssetGridProps) {
         if (!res.ok) {
           const err = await res.json();
           console.error("Upload failed:", err);
+        } else {
+          console.log("Upload OK:", file.name);
         }
       }
     } finally {
       setUploading(false);
     }
     await fetchAssets();
-  };
-
-  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files?.length) {
-      e.target.value = "";
-      await handleUpload(files);
-    }
   };
 
   const c = {
@@ -76,27 +71,30 @@ export default function AssetGrid({ categoryId, mode }: AssetGridProps) {
     accent: "#0A9E8C",
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-sm" style={{ color: c.muted }}>Loading assets…</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="p-4 h-full overflow-auto">
+    <div className="p-4 h-full overflow-auto relative">
+      {/* File input always in DOM — never inside conditional blocks */}
       <input
         ref={fileInputRef}
         type="file"
         accept="image/*"
         multiple
-        className="absolute w-0 h-0 overflow-hidden"
-        style={{ position: "absolute", left: "-9999px" }}
-        onChange={onFileChange}
+        style={{ position: "absolute", left: "-9999px", top: 0 }}
+        onChange={(e) => {
+          console.log("FILE SELECTED", e.target.files?.length, "categoryId:", categoryId);
+          const files = e.target.files;
+          if (!files?.length) return;
+          const fileList = Array.from(files);
+          e.target.value = "";
+          handleUploadFiles(fileList);
+        }}
       />
 
-      {assets.length > 0 && (
+      {loading ? (
+        <div className="flex items-center justify-center h-full">
+          <p className="text-sm" style={{ color: c.muted }}>Loading assets…</p>
+        </div>
+      ) : assets.length > 0 ? (
         <div
           className="grid gap-3"
           style={{ gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))" }}
@@ -111,9 +109,7 @@ export default function AssetGrid({ categoryId, mode }: AssetGridProps) {
             onClick={() => fileInputRef.current?.click()}
           />
         </div>
-      )}
-
-      {assets.length === 0 && (
+      ) : (
         <div className="flex items-center justify-center h-full">
           <UploadZone
             colors={c}
