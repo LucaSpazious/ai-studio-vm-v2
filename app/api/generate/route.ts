@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Replicate from "replicate";
 import { getServiceSupabase } from "@/lib/supabase";
-
-const NIGHT_PROMPT =
-  "Convert this hotel space to nighttime lighting only. Keep every wall, ceiling, floor, furniture and architectural element exactly as it is. Only change: interior lighting to warm ambient, existing windows to show night outside. Photorealistic. No new windows, no city views where there are walls.";
+import { NIGHT_PROMPT } from "@/lib/prompt";
 
 /** POST /api/generate — generate night versions for selected assets */
 export async function POST(req: NextRequest) {
@@ -54,8 +52,8 @@ export async function POST(req: NextRequest) {
         input: {
           input_image: asset.day_url,
           prompt: NIGHT_PROMPT,
-          strength: 0.55,
-          guidance_scale: 6,
+          strength: 0.45,
+          guidance_scale: 5,
           num_inference_steps: 35,
           output_quality: 95,
         },

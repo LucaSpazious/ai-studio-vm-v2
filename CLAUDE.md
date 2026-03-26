@@ -32,7 +32,7 @@ Property demo: Rosewood Mayakoba.
 - **Replicate flux-kontext-pro works.** fal.ai was tested and discarded (inconsistent model naming, 404s, requires explicit config).
 - Replicate `replicate.run()` returns a `FileOutput` object, not a string. Extract URL with `output.url().href`.
 - Replicate model input uses `input_image`, not `image_url`.
-- **strength: 0.55** for Night Mode (0.75 too dark, 0.45 too subtle).
+- **strength: 0.45** for Night Mode (0.75 too dark, 0.55 still too dark).
 
 ### Supabase
 - **getServiceSupabase() ALWAYS for writes.** Client-side uploads with anon key fail without RLS INSERT policies.
