@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import PreviewModal from "./PreviewModal";
+import { isDemoId, getDemoAssets } from "@/lib/demo-data";
 
 export interface Asset {
   id: string;
@@ -54,6 +55,14 @@ export default function AssetGrid({
   const isNight = mode === "night";
 
   const fetchAssets = useCallback(async () => {
+    // Demo mode: use hardcoded assets for demo categories
+    if (isDemoId(categoryId)) {
+      const demoAssets = getDemoAssets(categoryId) as Asset[];
+      setAssets(demoAssets);
+      onAssetsLoaded?.(demoAssets);
+      setLoading(false);
+      return;
+    }
     try {
       const res = await fetch(`/api/assets?categoryId=${categoryId}`);
       if (res.ok) {

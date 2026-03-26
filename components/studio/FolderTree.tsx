@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from "react";
+import { DEMO_CATEGORIES } from "@/lib/demo-data";
 
 /* ── Types ── */
 interface Category {
@@ -63,14 +64,18 @@ const FolderTree = forwardRef<FolderTreeHandle, FolderTreeProps>(function Folder
 
   const isNight = mode === "night";
 
-  /* ── Fetch ── */
+  /* ── Fetch (falls back to demo data when Supabase returns 0) ── */
   const fetchCategories = useCallback(async () => {
     try {
       const res = await fetch("/api/categories");
       if (res.ok) {
         const data = await res.json();
-        setCategories(data);
+        setCategories(data.length > 0 ? data : DEMO_CATEGORIES);
+      } else {
+        setCategories(DEMO_CATEGORIES);
       }
+    } catch {
+      setCategories(DEMO_CATEGORIES);
     } finally {
       setLoading(false);
     }
