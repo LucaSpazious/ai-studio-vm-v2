@@ -74,7 +74,7 @@ export default function PreviewModal({
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center"
-      style={{ backgroundColor: "rgba(0,0,0,0.65)" }}
+      style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
       onClick={onClose}
     >
       {/* Top bar */}
@@ -121,7 +121,7 @@ export default function PreviewModal({
         <img
           src={url}
           alt={asset.name}
-          style={{ maxWidth: "90vw", maxHeight: "90vh", objectFit: "contain", filter: "brightness(1.15)" }}
+          style={{ maxWidth: "90vw", maxHeight: "90vh", objectFit: "contain", filter: "brightness(1.4)" }}
         />
       </div>
 
