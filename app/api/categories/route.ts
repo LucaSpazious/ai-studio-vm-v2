@@ -1,22 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase";
+import { DEMO_CATEGORIES } from "@/lib/demo-data";
 
 const PROPERTY_ID = "rosewood-mayakoba";
 
 /** GET /api/categories — list all categories for the property */
 export async function GET() {
-  const supabase = getServiceSupabase();
-  const { data, error } = await supabase
-    .from("aistudio_categories")
-    .select("*")
-    .eq("property_id", PROPERTY_ID)
-    .order("order", { ascending: true })
-    .order("created_at", { ascending: true });
+  try {
+    const supabase = getServiceSupabase();
+    const { data, error } = await supabase
+      .from("aistudio_categories")
+      .select("*")
+      .eq("property_id", PROPERTY_ID)
+      .order("order", { ascending: true })
+      .order("created_at", { ascending: true });
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error || !data || data.length === 0) {
+      return NextResponse.json(DEMO_CATEGORIES);
+    }
+    return NextResponse.json(data);
+  } catch {
+    return NextResponse.json(DEMO_CATEGORIES);
   }
-  return NextResponse.json(data);
 }
 
 /** POST /api/categories — create a new category */

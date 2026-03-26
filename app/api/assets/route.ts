@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase";
+import { isDemoId, getDemoAssets } from "@/lib/demo-data";
 
 const PROPERTY_ID = "rosewood-mayakoba";
 
@@ -14,16 +15,25 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const supabase = getServiceSupabase();
-  const { data, error } = await supabase
-    .from("aistudio_assets")
-    .select("*")
-    .eq("category_id", categoryId)
-    .eq("property_id", PROPERTY_ID)
-    .order("created_at", { ascending: true });
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  // Demo categories — return hardcoded assets directly
+  if (isDemoId(categoryId)) {
+    return NextResponse.json(getDemoAssets(categoryId));
   }
-  return NextResponse.json(data);
+
+  try {
+    const supabase = getServiceSupabase();
+    const { data, error } = await supabase
+      .from("aistudio_assets")
+      .select("*")
+      .eq("category_id", categoryId)
+      .eq("property_id", PROPERTY_ID)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    return NextResponse.json(data);
+  } catch {
+    return NextResponse.json([]);
+  }
 }
