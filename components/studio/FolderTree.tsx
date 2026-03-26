@@ -64,22 +64,11 @@ const FolderTree = forwardRef<FolderTreeHandle, FolderTreeProps>(function Folder
 
   const isNight = mode === "night";
 
-  /* ── Fetch (falls back to demo data when Supabase returns 0 or fails) ── */
-  const fetchCategories = useCallback(async () => {
-    try {
-      const res = await fetch("/api/categories");
-      const data = await res.json();
-      // Use demo if: non-200, not an array, or empty array
-      if (!res.ok || !Array.isArray(data) || data.length === 0) {
-        setCategories(DEMO_CATEGORIES);
-      } else {
-        setCategories(data);
-      }
-    } catch {
-      setCategories(DEMO_CATEGORIES);
-    } finally {
-      setLoading(false);
-    }
+  /* ── Demo mode: load hardcoded categories directly (no API call) ── */
+  // TODO: restore fetch("/api/categories") when Supabase is connected
+  const fetchCategories = useCallback(() => {
+    setCategories(DEMO_CATEGORIES);
+    setLoading(false);
   }, []);
 
   useEffect(() => {
