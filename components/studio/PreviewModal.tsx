@@ -121,7 +121,7 @@ export default function PreviewModal({
         <img
           src={url}
           alt={asset.name}
-          style={{ maxWidth: "90vw", maxHeight: "90vh", objectFit: "contain" }}
+          style={{ maxWidth: "90vw", maxHeight: "90vh", objectFit: "contain", ...(showNight && { filter: "brightness(1.6) contrast(0.95)" }) }}
         />
       </div>
 
