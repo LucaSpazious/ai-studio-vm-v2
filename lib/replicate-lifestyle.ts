@@ -38,14 +38,13 @@ export async function generateLifestyleImage(
   return { imageUrl, generationTimeMs };
 }
 
-/** Generate N variations in parallel (max 4) */
+/** Generate variations sequentially (1 at a time to avoid Replicate saturation) */
 export async function generateLifestyleVariations(
   params: GenerateParams,
-  count: number = 3
+  _count: number = 3
 ): Promise<GenerateResult[]> {
-  const n = Math.min(count, 4);
-  const promises = Array.from({ length: n }, () =>
-    generateLifestyleImage(params)
-  );
-  return Promise.all(promises);
+  // TODO: restore parallel generation once Replicate concurrency is stable
+  void _count;
+  const result = await generateLifestyleImage(params);
+  return [result];
 }
