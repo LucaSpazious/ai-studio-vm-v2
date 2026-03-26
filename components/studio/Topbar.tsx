@@ -29,30 +29,30 @@ export default function Topbar({ mode, onModeChange, onNewCategory, onNewSubfold
 
   return (
     <header
-      className="h-[50px] flex items-center px-4 gap-3 shrink-0 border-b"
+      className="h-[50px] flex items-center px-5 gap-4 shrink-0 border-b"
       style={{
         backgroundColor: isNight ? "#0A1A19" : "#ffffff",
         borderColor: isNight ? "#1B3A3A" : "#E5E7EB",
       }}
     >
-      {/* Title */}
-      <h1
-        className="text-[18px] font-semibold flex-1 whitespace-nowrap"
-        style={{ color: isNight ? "#E2F5F2" : "#111827" }}
-      >
-        AI Studio
-      </h1>
-
-      {/* Property badge */}
-      <span
-        className="text-xs font-medium px-3 py-1 rounded whitespace-nowrap"
-        style={{
-          backgroundColor: isNight ? "#0D2929" : "#F3F4F6",
-          color: isNight ? "#60D4C8" : "#374151",
-        }}
-      >
-        Rosewood Mayakoba
-      </span>
+      {/* Property name as primary title */}
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <h1
+          className="text-[16px] font-semibold whitespace-nowrap"
+          style={{ color: isNight ? "#E2F5F2" : "#111827" }}
+        >
+          Rosewood Mayakoba
+        </h1>
+        <span
+          className="text-[10px] font-semibold tracking-wide uppercase px-2 py-0.5 rounded"
+          style={{
+            backgroundColor: isNight ? "#0D2929" : "#F3F4F6",
+            color: isNight ? "#60D4C8" : "#6B7280",
+          }}
+        >
+          AI Studio
+        </span>
+      </div>
 
       {/* Day/Night toggle */}
       <div className="flex rounded-full overflow-hidden border" style={{ borderColor: isNight ? "#0A9E8C" : "#FDE68A" }}>
